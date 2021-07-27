@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Message;
 use App\Entity\User;
 use App\Form\UserType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -10,6 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Serializer\SerializerInterface;
 
 
 class UserController extends AbstractController
@@ -35,32 +37,20 @@ class UserController extends AbstractController
     /**
      * @Route("/register", name="register")
      */
-    public function register(User $user = null, Request $req, EntityManagerInterface $em, UserPasswordHasherInterface $hash): Response
+    public function register(Request $req, SerializerInterface $serializer, EntityManagerInterface $emi, UserPasswordHasherInterface $hash): Response
     {
-        $creationMode = false;
-        if (!$user) {
-            $creationMode = true;
-            $user = new User();
-        }
+        $user = $serializer->deserialize($req->getContent(), User::class, 'json');
 
-        $form = $this->createForm(UserType::class, $user);
-        $form->handleRequest($req);
+        $hashedPassword = $hash->hashPassword($user, $user->getPassword());
+        $user->setPassword($hashedPassword);
+        $emi->persist($user);
+        $emi->flush();
 
-        if ($form->isSubmitted() && $form->isValid()) {
+        $data = ['user' => $user];
 
-            $user = $form->getData();
-            $hashedPassword = $hash->hashPassword($user, $user->getPassword());
-            $user->setPassword($hashedPassword);
-            $em->persist($user);
-            $em->flush();
-
-            return $this->redirectToRoute('login');
-        }
-
-
-        return $this->render('auth/register.html.twig', [
-            'form' => $form->createView(),
-
-        ]);
+        return $this->json(
+            $data,
+            200
+        );
     }
 }
