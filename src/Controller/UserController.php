@@ -2,9 +2,8 @@
 
 namespace App\Controller;
 
-use App\Entity\Message;
+
 use App\Entity\User;
-use App\Form\UserType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -40,13 +39,13 @@ class UserController extends AbstractController
     public function register(Request $req, SerializerInterface $serializer, EntityManagerInterface $emi, UserPasswordHasherInterface $hash): Response
     {
         $user = $serializer->deserialize($req->getContent(), User::class, 'json');
-
+//        dd($user);
         $hashedPassword = $hash->hashPassword($user, $user->getPassword());
         $user->setPassword($hashedPassword);
         $emi->persist($user);
         $emi->flush();
 
-        $data = ['user' => $user];
+        $data = ['user_register' => "success"];
 
         return $this->json(
             $data,
